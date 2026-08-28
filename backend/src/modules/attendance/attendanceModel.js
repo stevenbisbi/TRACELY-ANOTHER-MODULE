@@ -9,6 +9,12 @@ const Asistencia = sequelize.define('asistencia', {
   presente:       { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
   registrado_por: { type: DataTypes.STRING, allowNull: true },  // id_institucional del docente
   observacion:    { type: DataTypes.STRING, allowNull: true },
+  // Cuántas horas vale esta sesión (para el cálculo por % de horas del Art. 29).
+  horas:          { type: DataTypes.INTEGER, allowNull: false, defaultValue: 2 },
+  // Una inasistencia justificada NO cuenta como injustificada. Se marca true
+  // solo cuando la Dirección avala la excusa que la cubre.
+  justificada:    { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+  excusa_id:      { type: DataTypes.UUID, allowNull: true, references: { model: 'excusa', key: 'id' } },
 }, {
   tableName: 'asistencia',
   indexes: [{ unique: true, fields: ['inscripcion_id', 'fecha'] }],

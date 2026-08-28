@@ -21,7 +21,9 @@ const Usuario = sequelize.define('usuario', {
     allowNull: false,
   },
   rol: {
-    type: DataTypes.ENUM('estudiante', 'docente', 'admin'),
+    // director_programa y decano se agregan para el flujo de excusas (Art. 29):
+    // la Dirección del programa es quien avala las inasistencias justificadas.
+    type: DataTypes.ENUM('estudiante', 'docente', 'admin', 'director_programa', 'decano'),
     allowNull: false,
     defaultValue: 'estudiante',
   },

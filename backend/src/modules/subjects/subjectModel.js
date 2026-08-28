@@ -37,6 +37,13 @@ const Asignatura = sequelize.define('asignatura', {
     allowNull: false,
     defaultValue: 3.0,
   },
+  // Total de horas programadas de la asignatura en el semestre. Base para el
+  // cálculo de inasistencia por porcentaje (Art. 29). Nullable: si no está
+  // definido, el motor cae a conteo de sesiones en vez de porcentaje de horas.
+  horas_programadas: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 }, {
   tableName: 'asignatura',
 });

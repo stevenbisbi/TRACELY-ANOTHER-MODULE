@@ -1,9 +1,11 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
+const path = require('path');
 const {
   sequelize, Usuario, Carrera, Semestre, Estudiante, Docente,
   Pensum, Asignatura, Corte, Actividad, Inscripcion,
   Calificacion, Asistencia, Alerta,
+  Excusa, PoliticaAcademica, ReglamentoVersion,
 } = require('../models');
 
 async function seed() {
@@ -28,6 +30,7 @@ async function seed() {
       { id_institucional: 'ADM-001',   nombre: 'Admin UNICATÓLICA',   correo: 'admin@unicatolica.edu.co',           contrasena_hash: await hash('admin123'), rol: 'admin'      },
       { id_institucional: 'DOC-0112',  nombre: 'Dr. Carlos Ramírez',  correo: 'c.ramirez@unicatolica.edu.co',       contrasena_hash: await hash('prof123'),  rol: 'docente'     },
       { id_institucional: 'DOC-0087',  nombre: 'Mg. Laura Ospina',    correo: 'l.ospina@unicatolica.edu.co',        contrasena_hash: await hash('prof123'),  rol: 'docente'     },
+      { id_institucional: 'DIR-TDS',   nombre: 'Ing. Patricia Gómez', correo: 'p.gomez@unicatolica.edu.co',         contrasena_hash: await hash('dir123'),   rol: 'director_programa' },
       { id_institucional: '2021-0342', nombre: 'Michael Sanchez',     correo: 'michael.sanchez@unicatolica.edu.co', contrasena_hash: await hash('est123'),   rol: 'estudiante'  },
       { id_institucional: '2021-0199', nombre: 'Valentina Torres',    correo: 'v.torres@unicatolica.edu.co',        contrasena_hash: await hash('est123'),   rol: 'estudiante'  },
       { id_institucional: '2022-0411', nombre: 'Andrés Mejía',        correo: 'a.mejia@unicatolica.edu.co',         contrasena_hash: await hash('est123'),   rol: 'estudiante'  },
@@ -36,7 +39,7 @@ async function seed() {
 
     // ── Carreras ──────────────────────────────────────────────
     const [sistemas, admin_emp] = await Carrera.bulkCreate([
-      { nombre: 'Tecnología en Desarrollo de Software', codigo: 'TDS', total_creditos: 120 },
+      { nombre: 'Tecnología en Desarrollo de Software', codigo: 'TDS', total_creditos: 120, director_usuario_id: 'DIR-TDS' },
       { nombre: 'Administración de Empresas',           codigo: 'ADM', total_creditos: 150 },
     ]);
     console.log('✅ Carreras creadas');
@@ -65,12 +68,14 @@ async function seed() {
     console.log('✅ Pensum creado');
 
     // ── Asignaturas 2025-1 ────────────────────────────────────
+    // horas_programadas: total del semestre, base del cálculo por % del Art. 29
+    // (16 sesiones x horas/sesión: 4 créditos ≈ 64h, 3 créditos ≈ 48h)
     const [a_bd2, a_redes, a_ing_sw, a_so, a_est] = await Asignatura.bulkCreate([
-      { docente_id: doc1.id, pensum_id: p_bd2.id,   nombre: 'Bases de Datos II',      NRC: 'IS401-G1-2025-1', semestre_academico: '2025-1' },
-      { docente_id: doc2.id, pensum_id: p_redes.id, nombre: 'Redes de Computadores',  NRC: 'IS410-G1-2025-1', semestre_academico: '2025-1' },
-      { docente_id: doc2.id, pensum_id: p_ing_sw.id,nombre: 'Ingeniería de Software', NRC: 'IS420-G1-2025-1', semestre_academico: '2025-1' },
-      { docente_id: doc1.id, pensum_id: p_so.id,    nombre: 'Sistemas Operativos',    NRC: 'IS405-G1-2025-1', semestre_academico: '2025-1' },
-      { docente_id: doc2.id, pensum_id: p_est.id,   nombre: 'Estadística Aplicada',   NRC: 'MAT311-G1-2025-1',semestre_academico: '2025-1' },
+      { docente_id: doc1.id, pensum_id: p_bd2.id,   nombre: 'Bases de Datos II',      NRC: 'IS401-G1-2025-1', semestre_academico: '2025-1', horas_programadas: 64 },
+      { docente_id: doc2.id, pensum_id: p_redes.id, nombre: 'Redes de Computadores',  NRC: 'IS410-G1-2025-1', semestre_academico: '2025-1', horas_programadas: 48 },
+      { docente_id: doc2.id, pensum_id: p_ing_sw.id,nombre: 'Ingeniería de Software', NRC: 'IS420-G1-2025-1', semestre_academico: '2025-1', horas_programadas: 64 },
+      { docente_id: doc1.id, pensum_id: p_so.id,    nombre: 'Sistemas Operativos',    NRC: 'IS405-G1-2025-1', semestre_academico: '2025-1', horas_programadas: 48 },
+      { docente_id: doc2.id, pensum_id: p_est.id,   nombre: 'Estadística Aplicada',   NRC: 'MAT311-G1-2025-1',semestre_academico: '2025-1', horas_programadas: 48 },
     ]);
     console.log('✅ Asignaturas creadas');
 
@@ -237,9 +242,53 @@ async function seed() {
     ]);
     console.log('✅ Alertas creadas');
 
+    // ── Política académica v1 (parámetros del Art. 29) ────────
+    // El motor de inasistencia lee de aquí, nunca de constantes en el código.
+    await PoliticaAcademica.create({
+      version: 1,
+      activa: true,
+      vigente_desde: '2025-01-01',
+      reglamento_version: '2026-07-17',
+      parametros: {
+        inasistencia_max_sin_justificar: 0.20,   // 20%
+        inasistencia_max_con_justificar: 0.30,   // 30% (tope duro, aun justificado)
+        plazo_radicacion_dias_habiles: 3,
+        tipos_justificacion: [
+          'enfermedad_incapacitante',
+          'calamidad_domestica',
+          'motivos_laborales',
+          'emergencia_desastre',
+        ],
+        nota_perdida_por_inasistencia: 0.0,
+        nota_aprobacion: 3.0,
+        // Artículo de origen de cada parámetro (para citar la norma).
+        fuentes: {
+          inasistencia_max_sin_justificar: 'Art. 29',
+          inasistencia_max_con_justificar: 'Art. 29',
+          plazo_radicacion_dias_habiles: 'Art. 29, parágrafo',
+          tipos_justificacion: 'Art. 29, parágrafo',
+          nota_perdida_por_inasistencia: 'Art. 29',
+        },
+      },
+    });
+    console.log('✅ Política académica v1 creada');
+
+    // ── Versión vigente del Reglamento Estudiantil (el PDF) ───
+    await ReglamentoVersion.create({
+      version: '2026-07-17',
+      nombre_archivo: 'reglamento-estudiantil-20260717-c418c04f.pdf',
+      ruta_archivo: path.join('data', 'reglamento', 'reglamento-estudiantil-20260717-c418c04f.pdf'),
+      fecha_publicacion: '2026-07-17',
+      vigente_desde: '2025-01-01',
+      activo: true,
+      // file_id se rellena la primera vez que la capa de IA lo sube.
+    });
+    console.log('✅ Reglamento (versión vigente) registrado');
+
     console.log('\n🎉 Seed completado con datos realistas.');
     console.log('  Admin:      ADM-001    / admin123');
     console.log('  Docente:    DOC-0112   / prof123');
+    console.log('  Director:   DIR-TDS    / dir123   (avala excusas de Desarrollo de Software)');
     console.log('  Estudiante: 2021-0342  / est123  (Michael - 5 materias con notas y asistencia)');
     console.log('\n  Datos para la sustentación:');
     console.log('  - BD II: notas corte 1 y 2 completas, asistencia 92%');

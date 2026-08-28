@@ -21,6 +21,13 @@ const Carrera = sequelize.define('carrera', {
     allowNull: false,
     defaultValue: 0,
   },
+  // Director del programa: usuario con rol 'director_programa' que avala las
+  // excusas de los estudiantes de esta carrera (Art. 29). Nullable en prototipo.
+  director_usuario_id: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    references: { model: 'usuario', key: 'id_institucional' },
+  },
 }, {
   tableName: 'carrera',
 });

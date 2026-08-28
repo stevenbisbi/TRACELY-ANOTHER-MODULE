@@ -12,6 +12,9 @@ const Inscripcion  = require('../modules/inscripciones/inscripcionModel');
 const Calificacion = require('../modules/calificaciones/calificacionModel');
 const Asistencia   = require('../modules/attendance/attendanceModel');
 const Alerta       = require('../modules/alertas/alertaModel');
+const Excusa            = require('../modules/excusas/excusaModel');
+const PoliticaAcademica = require('../modules/politica/politicaModel');
+const ReglamentoVersion = require('../modules/politica/reglamentoModel');
 
 // Usuario <-> Estudiante / Docente
 Usuario.hasOne(Estudiante,  { foreignKey: 'usuario_id', as: 'perfil_estudiante' });
@@ -63,10 +66,28 @@ Asistencia.belongsTo(Inscripcion,{ foreignKey: 'inscripcion_id', as: 'inscripcio
 Inscripcion.hasMany(Alerta,  { foreignKey: 'inscripcion_id', as: 'alertas' });
 Alerta.belongsTo(Inscripcion,{ foreignKey: 'inscripcion_id', as: 'inscripcion' });
 
+// ── Excusas (flujo de justificación de inasistencia, Art. 29) ────────────────
+// Inscripcion <-> Excusa
+Inscripcion.hasMany(Excusa,  { foreignKey: 'inscripcion_id', as: 'excusas' });
+Excusa.belongsTo(Inscripcion,{ foreignKey: 'inscripcion_id', as: 'inscripcion' });
+
+// Excusa <-> Asistencia (una excusa avalada cubre varias inasistencias del rango)
+Excusa.hasMany(Asistencia,   { foreignKey: 'excusa_id', as: 'asistencias' });
+Asistencia.belongsTo(Excusa, { foreignKey: 'excusa_id', as: 'excusa' });
+
+// Quién avaló la excusa (director de programa)
+Usuario.hasMany(Excusa,  { foreignKey: 'avalada_por', as: 'excusas_avaladas' });
+Excusa.belongsTo(Usuario,{ foreignKey: 'avalada_por', as: 'avalador' });
+
+// Carrera <-> Director (usuario con rol director_programa)
+Usuario.hasMany(Carrera,  { foreignKey: 'director_usuario_id', as: 'programas_dirigidos' });
+Carrera.belongsTo(Usuario,{ foreignKey: 'director_usuario_id', as: 'director' });
+
 module.exports = {
   sequelize,
   Usuario, Carrera, Semestre,
   Estudiante, Docente,
   Pensum, Asignatura, Corte, Actividad,
   Inscripcion, Calificacion, Asistencia, Alerta,
+  Excusa, PoliticaAcademica, ReglamentoVersion,
 };
