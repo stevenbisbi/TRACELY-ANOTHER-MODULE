@@ -16,6 +16,10 @@ module.exports = {
   anthropic: {
     // La API key vive SOLO aquí (vía entorno). Ningún otro archivo la lee.
     apiKey: process.env.ANTHROPIC_API_KEY || '',
+    // Requerido solo si la key está vinculada a identidad (identity-linked):
+    // en ese caso la API exige el id del workspace en cada petición.
+    // Se encuentra en console.anthropic.com -> Settings -> Workspaces (wrkspc_...).
+    workspaceId: process.env.ANTHROPIC_WORKSPACE_ID || '',
     // Modelo por defecto para tareas de análisis. Configurable por si se quiere
     // bajar a uno más económico en pruebas.
     model: process.env.AI_MODEL || 'claude-opus-5',

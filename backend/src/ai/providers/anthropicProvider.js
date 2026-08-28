@@ -18,7 +18,15 @@ class AnthropicProvider extends LLMProvider {
     this.cfg = config.anthropic;
     // El cliente se crea de forma perezosa: sin API key no se instancia,
     // así el backend arranca igual aunque la IA no esté configurada.
-    this.client = this.cfg.apiKey ? new Anthropic({ apiKey: this.cfg.apiKey }) : null;
+    // Si la key es identity-linked, la API exige el workspace id en cada petición.
+    this.client = this.cfg.apiKey
+      ? new Anthropic({
+          apiKey: this.cfg.apiKey,
+          ...(this.cfg.workspaceId
+            ? { defaultHeaders: { 'anthropic-workspace-id': this.cfg.workspaceId } }
+            : {}),
+        })
+      : null;
   }
 
   isReady() {
