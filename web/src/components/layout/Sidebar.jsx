@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, CheckCircle, Settings, LogOut, X, Pencil, Camera, Check, GraduationCap, Bell, BookOpen, FileText } from 'lucide-react';
+import { LayoutDashboard, BarChart3, CheckCircle, Settings, LogOut, X, Pencil, Camera, Check, GraduationCap, Bell, BookOpen, FileText, ScrollText } from 'lucide-react';
 import profileDefault from '../../assets/profile.png';
 import { getStudentAlerts } from '../../services/alertService';
 
@@ -17,6 +17,7 @@ const IcoCurriculum = () => <GraduationCap size={16} />;
 const IcoAlerts     = () => <Bell size={16} />;
 const IcoCourses    = () => <BookOpen size={16} />;
 const IcoExcusas    = () => <FileText size={16} />;
+const IcoReglamento = () => <ScrollText size={16} />;
 
 // ── Utilidades de foto ─────────────────────────────────────────
 const PHOTO_PREFIX = 'tracely_photo_';
@@ -246,7 +247,10 @@ export default function Sidebar({ role, page, userData, unread, onLogout, mobile
     { id: 'dashboard', icon: <IcoDashboard />, label: 'Dashboard',  path: '/teacher/dashboard' },
     { id: 'courses',   icon: <IcoCourses />,   label: 'Mis Cursos', path: '/teacher/courses' },
   ];
-  const adminNav   = [{ id: 'dashboard', icon: <IcoDashboard />, label: 'Dashboard', path: '/admin/dashboard' }];
+  const adminNav   = [
+    { id: 'dashboard',  icon: <IcoDashboard />, label: 'Dashboard',  path: '/admin/dashboard' },
+    { id: 'reglamento', icon: <IcoReglamento />, label: 'Reglamento', path: '/admin/reglamento' },
+  ];
   const directorNav = [{ id: 'excusas', icon: <IcoExcusas />, label: 'Excusas', path: '/director/excusas' }];
   const nav = role === 'student' ? studentNav
     : role === 'teacher' ? teacherNav
@@ -318,3 +322,4 @@ export default function Sidebar({ role, page, userData, unread, onLogout, mobile
     </>
   );
 }
+

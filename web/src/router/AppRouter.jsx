@@ -17,6 +17,7 @@ import TeacherDashboard   from '../views/teacher/DashboardPage';
 import TeacherCoursesPage from '../views/teacher/TeacherCoursesPage';
 import AdminDashboard     from '../views/admin/AdminDashboard';
 import DirectorExcusas    from '../views/director/ExcusasInboxPage';
+import ReglamentoPage     from '../views/admin/ReglamentoPage';
 import NotFoundPage       from '../views/shared/NotFoundPage';
 
 // ── Bloquea el botón atrás cuando el usuario está autenticado ──
@@ -137,6 +138,7 @@ export default function AppRouter() {
         <Route path="/teacher/courses"   element={<PrivateRoute allowedRoles={['teacher']}><TeacherLayout View={TeacherCoursesPage} /></PrivateRoute>} />
         <Route path="/admin/dashboard"   element={<PrivateRoute allowedRoles={['admin']}><AdminLayout View={AdminDashboard} /></PrivateRoute>} />
         <Route path="/director/excusas"  element={<PrivateRoute allowedRoles={['director']}><DirectorLayout View={DirectorExcusas} /></PrivateRoute>} />
+        <Route path="/admin/reglamento"  element={<PrivateRoute allowedRoles={['admin']}><AdminLayout View={ReglamentoPage} /></PrivateRoute>} />
         <Route path="*"                  element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>

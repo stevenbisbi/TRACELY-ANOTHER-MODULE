@@ -15,6 +15,7 @@ const PAGE_TITLES = {
   alerts:      'Mis Alertas',
   courses:     'Mis Cursos',
   excusas:     'Excusas de Inasistencia',
+  reglamento:  'Reglamento y Política',
 };
 
 // Deduce la página activa desde la URL real — única fuente de verdad
@@ -24,6 +25,7 @@ function pageFromPath(pathname) {
   if (pathname.includes('/curriculum')) return 'curriculum';
   if (pathname.includes('/alerts'))     return 'alerts';
   if (pathname.includes('/excusas'))    return 'excusas';
+  if (pathname.includes('/reglamento')) return 'reglamento';
   if (pathname.includes('/courses'))    return 'courses';
   return 'dashboard';
 }
