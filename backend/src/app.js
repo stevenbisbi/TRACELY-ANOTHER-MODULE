@@ -41,9 +41,16 @@ const app    = express();
 const server = http.createServer(app);
 const PORT   = process.env.PORT || 3000;
 
+// Orígenes permitidos para CORS. CORS_ORIGIN acepta una lista separada por comas
+// (ej. web en :5173 y Expo web en :8081), para no tener que alternarla.
+const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:8081')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 // ── Socket.IO: notificaciones de alertas en tiempo real ─────────
 const io = new Server(server, {
-  cors: { origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true },
+  cors: { origin: corsOrigins, credentials: true },
 });
 
 io.use((socket, next) => {
@@ -64,7 +71,7 @@ io.on('connection', (socket) => {
 
 socketService.init(io);
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: corsOrigins, credentials: true }));
 app.use(express.json());
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
