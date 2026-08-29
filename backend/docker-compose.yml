@@ -1,0 +1,21 @@
+services:
+  # ── API Node.js ─────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tracely_api
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env          # crear en el servidor a partir de .env.example — nunca se commitea
+    environment:
+      NODE_ENV: production
+      # host.docker.internal se resuelve a la IP del host via extra_hosts de
+      # abajo. El Postgres corre nativo en la VPS (fuera de Docker), no como
+      # servicio de este compose.
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
