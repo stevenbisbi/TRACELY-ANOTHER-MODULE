@@ -14,6 +14,7 @@ const PAGE_TITLES = {
   curriculum:  'Mi Carrera',
   alerts:      'Mis Alertas',
   courses:     'Mis Cursos',
+  excusas:     'Excusas de Inasistencia',
 };
 
 // Deduce la página activa desde la URL real — única fuente de verdad
@@ -22,6 +23,7 @@ function pageFromPath(pathname) {
   if (pathname.includes('/attendance')) return 'attendance';
   if (pathname.includes('/curriculum')) return 'curriculum';
   if (pathname.includes('/alerts'))     return 'alerts';
+  if (pathname.includes('/excusas'))    return 'excusas';
   if (pathname.includes('/courses'))    return 'courses';
   return 'dashboard';
 }

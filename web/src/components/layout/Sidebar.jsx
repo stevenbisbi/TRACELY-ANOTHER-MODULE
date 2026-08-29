@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, CheckCircle, Settings, LogOut, X, Pencil, Camera, Check, GraduationCap, Bell, BookOpen } from 'lucide-react';
+import { LayoutDashboard, BarChart3, CheckCircle, Settings, LogOut, X, Pencil, Camera, Check, GraduationCap, Bell, BookOpen, FileText } from 'lucide-react';
 import profileDefault from '../../assets/profile.png';
 import { getStudentAlerts } from '../../services/alertService';
 
@@ -16,6 +16,7 @@ const IcoCamera     = () => <Camera size={14} />;
 const IcoCurriculum = () => <GraduationCap size={16} />;
 const IcoAlerts     = () => <Bell size={16} />;
 const IcoCourses    = () => <BookOpen size={16} />;
+const IcoExcusas    = () => <FileText size={16} />;
 
 // ── Utilidades de foto ─────────────────────────────────────────
 const PHOTO_PREFIX = 'tracely_photo_';
@@ -239,6 +240,7 @@ export default function Sidebar({ role, page, userData, unread, onLogout, mobile
     { id: 'attendance',  icon: <IcoAttendance />,  label: 'Asistencia', path: '/student/attendance' },
     { id: 'curriculum',  icon: <IcoCurriculum />,  label: 'Mi Carrera', path: '/student/curriculum' },
     { id: 'alerts',      icon: <IcoAlerts />,      label: 'Mis Alertas', path: '/student/alerts', badge: activeAlerts },
+    { id: 'excusas',     icon: <IcoExcusas />,     label: 'Excusas',    path: '/student/excusas' },
   ];
   const teacherNav = [
     { id: 'dashboard', icon: <IcoDashboard />, label: 'Dashboard',  path: '/teacher/dashboard' },

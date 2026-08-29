@@ -12,6 +12,7 @@ import GradesPage         from '../views/student/GradesPages';
 import AttendancePage     from '../views/student/AttendancePage';
 import CurriculumPage     from '../views/student/CurriculumPage';
 import AlertsPage         from '../views/student/AlertsPage';
+import ExcusasPage        from '../views/student/ExcusasPage';
 import TeacherDashboard   from '../views/teacher/DashboardPage';
 import TeacherCoursesPage from '../views/teacher/TeacherCoursesPage';
 import AdminDashboard     from '../views/admin/AdminDashboard';
@@ -125,6 +126,7 @@ export default function AppRouter() {
         <Route path="/student/attendance"element={<PrivateRoute allowedRoles={['student']}><StudentLayout View={AttendancePage} /></PrivateRoute>} />
         <Route path="/student/curriculum"element={<PrivateRoute allowedRoles={['student']}><StudentLayout View={CurriculumPage} /></PrivateRoute>} />
         <Route path="/student/alerts"    element={<PrivateRoute allowedRoles={['student']}><StudentLayout View={AlertsPage} /></PrivateRoute>} />
+        <Route path="/student/excusas"   element={<PrivateRoute allowedRoles={['student']}><StudentLayout View={ExcusasPage} /></PrivateRoute>} />
         <Route path="/teacher/dashboard" element={<PrivateRoute allowedRoles={['teacher']}><TeacherLayout View={TeacherDashboard} /></PrivateRoute>} />
         <Route path="/teacher/courses"   element={<PrivateRoute allowedRoles={['teacher']}><TeacherLayout View={TeacherCoursesPage} /></PrivateRoute>} />
         <Route path="/admin/dashboard"   element={<PrivateRoute allowedRoles={['admin']}><AdminLayout View={AdminDashboard} /></PrivateRoute>} />
