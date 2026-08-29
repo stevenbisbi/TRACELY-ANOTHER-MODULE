@@ -22,3 +22,7 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# Archivos subidos por usuarios (excusas) — no versionar
+data/excusas/*
+!data/excusas/.gitkeep
