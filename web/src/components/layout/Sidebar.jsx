@@ -194,7 +194,7 @@ function SettingsModal({ userData, role, onClose }) {
             <div className="settings-field-label">Rol</div>
             <div className="settings-field-value-row">
               <span className="settings-field-value" style={{ textTransform: 'capitalize' }}>
-                {role === 'student' ? 'Estudiante' : role === 'teacher' ? 'Docente' : 'Administrador'}
+                {role === 'student' ? 'Estudiante' : role === 'teacher' ? 'Docente' : role === 'director' ? 'Director de programa' : 'Administrador'}
               </span>
             </div>
           </div>
@@ -247,7 +247,11 @@ export default function Sidebar({ role, page, userData, unread, onLogout, mobile
     { id: 'courses',   icon: <IcoCourses />,   label: 'Mis Cursos', path: '/teacher/courses' },
   ];
   const adminNav   = [{ id: 'dashboard', icon: <IcoDashboard />, label: 'Dashboard', path: '/admin/dashboard' }];
-  const nav = role === 'student' ? studentNav : role === 'teacher' ? teacherNav : adminNav;
+  const directorNav = [{ id: 'excusas', icon: <IcoExcusas />, label: 'Excusas', path: '/director/excusas' }];
+  const nav = role === 'student' ? studentNav
+    : role === 'teacher' ? teacherNav
+    : role === 'director' ? directorNav
+    : adminNav;
 
   const handleNav = (item) => navigate(item.path);
   const handleLogout = () => {
@@ -275,6 +279,7 @@ export default function Sidebar({ role, page, userData, unread, onLogout, mobile
           <div className="sidebar-role">
             {role === 'student' ? (userData.program?.split(' ')[0] ?? 'Estudiante')
               : role === 'teacher' ? (userData.department?.split(' ')[0] ?? 'Docente')
+              : role === 'director' ? 'Dirección'
               : 'Admin'}
           </div>
         </div>

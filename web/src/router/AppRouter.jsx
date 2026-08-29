@@ -16,6 +16,7 @@ import ExcusasPage        from '../views/student/ExcusasPage';
 import TeacherDashboard   from '../views/teacher/DashboardPage';
 import TeacherCoursesPage from '../views/teacher/TeacherCoursesPage';
 import AdminDashboard     from '../views/admin/AdminDashboard';
+import DirectorExcusas    from '../views/director/ExcusasInboxPage';
 import NotFoundPage       from '../views/shared/NotFoundPage';
 
 // ── Bloquea el botón atrás cuando el usuario está autenticado ──
@@ -98,6 +99,10 @@ function TeacherLayout({ View }) {
   );
 }
 
+function DirectorLayout({ View }) {
+  return <MainLayout><View /></MainLayout>;
+}
+
 function AdminLayout({ View }) {
   return <MainLayout><View /></MainLayout>;
 }
@@ -108,6 +113,7 @@ function RoleRedirect() {
   if (user.role === 'student') return <Navigate to="/student/dashboard" replace />;
   if (user.role === 'teacher') return <Navigate to="/teacher/dashboard" replace />;
   if (user.role === 'admin')   return <Navigate to="/admin/dashboard"   replace />;
+  if (user.role === 'director') return <Navigate to="/director/excusas" replace />;
   return <Navigate to="/login" replace />;
 }
 
@@ -130,6 +136,7 @@ export default function AppRouter() {
         <Route path="/teacher/dashboard" element={<PrivateRoute allowedRoles={['teacher']}><TeacherLayout View={TeacherDashboard} /></PrivateRoute>} />
         <Route path="/teacher/courses"   element={<PrivateRoute allowedRoles={['teacher']}><TeacherLayout View={TeacherCoursesPage} /></PrivateRoute>} />
         <Route path="/admin/dashboard"   element={<PrivateRoute allowedRoles={['admin']}><AdminLayout View={AdminDashboard} /></PrivateRoute>} />
+        <Route path="/director/excusas"  element={<PrivateRoute allowedRoles={['director']}><DirectorLayout View={DirectorExcusas} /></PrivateRoute>} />
         <Route path="*"                  element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>

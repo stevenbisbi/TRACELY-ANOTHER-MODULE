@@ -1,6 +1,6 @@
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-const rolMap = { estudiante: 'student', docente: 'teacher', admin: 'admin' };
+const rolMap = { estudiante: 'student', docente: 'teacher', admin: 'admin', director_programa: 'director' };
 
 export const login = async (id, password) => {
   const res = await fetch(`${API}/users/login`, {
