@@ -61,6 +61,7 @@ export default function LoginPage() {
     if (user) {
       const path = user.role === 'student' ? '/student/dashboard'
         : user.role === 'teacher' ? '/teacher/dashboard'
+        : user.role === 'director' ? '/director/excusas'
         : '/admin/dashboard';
       navigate(path, { replace: true });
     }
