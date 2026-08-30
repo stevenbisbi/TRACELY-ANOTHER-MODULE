@@ -51,8 +51,11 @@ const excusaController = {
     try {
       const estudiante = await Estudiante.findOne({ where: { usuario_id: req.user.id }, attributes: ['id'] });
       if (!estudiante) return res.json([]);
+      // El análisis del asistente es insumo para la Dirección, no para el
+      // estudiante: se excluye de su respuesta.
       const excusas = await Excusa.findAll({
         where: { estudiante_id: estudiante.id },
+        attributes: { exclude: ['analisis_ia'] },
         order: [['fecha_radicacion', 'DESC']],
       });
       res.json(excusas);

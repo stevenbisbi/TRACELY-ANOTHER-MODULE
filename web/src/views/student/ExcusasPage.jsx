@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Loader2, FileText, Upload, CheckCircle2, XCircle, Clock, Sparkles,
-  AlertTriangle, Quote, CalendarDays,
+  AlertTriangle, CalendarDays,
 } from 'lucide-react';
 import { fadeInUp } from '../../utils/motionVariants';
 import { radicarExcusa, getMisExcusas } from '../../services/excusasService';
@@ -32,49 +32,6 @@ function fmt(d) {
 
 // Etiqueta de campo visible sobre fondo claro (login-label es blanca).
 const lbl = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 };
-
-// ── Tarjeta con el análisis de la IA de una excusa ────────────────────────────
-function AnalisisIA({ analisis }) {
-  if (!analisis) return null;
-  if (analisis.error) {
-    return <div style={{ fontSize: 12.5, color: 'var(--text3)', marginTop: 8 }}>El análisis automático no está disponible; queda para revisión manual.</div>;
-  }
-  const ext = analisis.extraccion;
-  const ev = analisis.evaluacion;
-  return (
-    <div style={{ marginTop: 12, background: 'var(--bg3)', borderRadius: 10, padding: '12px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-        <Sparkles size={13} /> Análisis del asistente
-      </div>
-      {ext && (
-        <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 8, lineHeight: 1.5 }}>{ext.resumen}</div>
-      )}
-      {ext?.anomalias?.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {ext.anomalias.map((a, i) => (
-            <div key={i} style={{ display: 'flex', gap: 6, fontSize: 12, color: 'var(--orange)' }}>
-              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 2 }} /> {a}
-            </div>
-          ))}
-        </div>
-      )}
-      {ev?.text && (
-        <details style={{ marginTop: 10 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
-            Ver evaluación contra el reglamento{ev.citations?.length ? ` (${ev.citations.length} citas)` : ''}
-          </summary>
-          <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 8, whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{ev.text}</div>
-          {ev.citations?.slice(0, 3).map((c, i) => (
-            <div key={i} style={{ display: 'flex', gap: 6, fontSize: 11.5, color: 'var(--text3)', marginTop: 6, fontStyle: 'italic' }}>
-              <Quote size={12} style={{ flexShrink: 0, marginTop: 2 }} />
-              «{(c.cited_text || '').trim().slice(0, 120)}»{c.start_page_number ? ` (pág. ${c.start_page_number})` : ''}
-            </div>
-          ))}
-        </details>
-      )}
-    </div>
-  );
-}
 
 export default function ExcusasPage({ estudianteId }) {
   const [excusas, setExcusas] = useState([]);
@@ -244,7 +201,6 @@ export default function ExcusasPage({ estudianteId }) {
                     </div>
                   )}
 
-                  <AnalisisIA analisis={ex.analisis_ia} />
                 </div>
               );
             })}
