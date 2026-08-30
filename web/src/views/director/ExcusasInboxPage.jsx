@@ -49,7 +49,7 @@ function AnalisisIA({ analisis }) {
         </div>
       )}
       {ev?.text && (
-        <details style={{ marginTop: 10 }} open>
+        <details style={{ marginTop: 10 }}>
           <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
             Evaluación contra el reglamento{ev.citations?.length ? ` (${ev.citations.length} citas)` : ''}
           </summary>
