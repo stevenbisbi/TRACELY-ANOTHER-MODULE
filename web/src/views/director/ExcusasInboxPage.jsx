@@ -125,9 +125,9 @@ export default function ExcusasInboxPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {excusas.map((ex) => {
-              const est = ex.inscripcion?.estudiante;
+              const est = ex.estudiante;
               const nombre = est?.usuario?.nombre ?? '—';
-              const asig = ex.inscripcion?.asignatura;
+              const programa = est?.carrera?.nombre;
               const busy = procesando === ex.id;
               return (
                 <div key={ex.id} style={{ border: '1px solid rgba(0,0,0,0.1)', borderRadius: 12, padding: '16px 18px' }}>
@@ -137,7 +137,7 @@ export default function ExcusasInboxPage() {
                         <User size={15} style={{ color: 'var(--text3)' }} /> {nombre}
                       </div>
                       <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 3 }}>
-                        {asig?.nombre} {asig?.NRC && <span style={{ color: 'var(--text3)' }}>· {asig.NRC}</span>}
+                        {est?.usuario?.id_institucional}{programa ? ` · ${programa}` : ''}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>

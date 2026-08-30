@@ -1,27 +1,23 @@
-const { Excusa, Inscripcion, Estudiante } = require('../../models');
+const { Excusa, Estudiante } = require('../../models');
 const excusaService = require('./excusaService');
 const ai = require('../../ai');
 
 const excusaController = {
-  // POST /api/excusas  (estudiante) — multipart: documento + campos
+  // POST /api/excusas  (estudiante) — multipart: documento + fechas.
+  // La excusa cubre al estudiante; no se elige materia.
   radicar: async (req, res) => {
     try {
-      const { inscripcion_id, fecha_inicio, fecha_fin } = req.body;
-      if (!inscripcion_id || !fecha_inicio || !fecha_fin) {
-        return res.status(400).json({ error: 'inscripcion_id, fecha_inicio y fecha_fin son requeridos.' });
+      const { fecha_inicio, fecha_fin } = req.body;
+      if (!fecha_inicio || !fecha_fin) {
+        return res.status(400).json({ error: 'fecha_inicio y fecha_fin son requeridos.' });
       }
 
-      // Verificar que la inscripción sea del estudiante autenticado.
-      const insc = await Inscripcion.findByPk(inscripcion_id, {
-        include: [{ model: Estudiante, as: 'estudiante', attributes: ['usuario_id'] }],
-      });
-      if (!insc) return res.status(404).json({ error: 'Inscripción no encontrada.' });
-      if (req.user.rol === 'estudiante' && insc.estudiante?.usuario_id !== req.user.id) {
-        return res.status(403).json({ error: 'No puedes radicar excusas de otra inscripción.' });
-      }
+      // Resolver el perfil de estudiante del usuario autenticado.
+      const estudiante = await Estudiante.findOne({ where: { usuario_id: req.user.id }, attributes: ['id'] });
+      if (!estudiante) return res.status(403).json({ error: 'Solo los estudiantes pueden radicar excusas.' });
 
       const excusa = await excusaService.radicarExcusa({
-        inscripcionId: inscripcion_id,
+        estudianteId: estudiante.id,
         fechaInicio: fecha_inicio,
         fechaFin: fecha_fin,
         documento: req.file, // multer memoryStorage
@@ -41,11 +37,10 @@ const excusaController = {
   // GET /api/excusas/mias  (estudiante)
   misExcusas: async (req, res) => {
     try {
+      const estudiante = await Estudiante.findOne({ where: { usuario_id: req.user.id }, attributes: ['id'] });
+      if (!estudiante) return res.json([]);
       const excusas = await Excusa.findAll({
-        include: [{
-          model: Inscripcion, as: 'inscripcion', required: true,
-          include: [{ model: Estudiante, as: 'estudiante', where: { usuario_id: req.user.id }, attributes: [] }],
-        }],
+        where: { estudiante_id: estudiante.id },
         order: [['fecha_radicacion', 'DESC']],
       });
       res.json(excusas);

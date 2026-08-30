@@ -5,9 +5,7 @@ import {
   AlertTriangle, Quote, CalendarDays,
 } from 'lucide-react';
 import { fadeInUp } from '../../utils/motionVariants';
-import {
-  getMisAsignaturas, radicarExcusa, getMisExcusas,
-} from '../../services/excusasService';
+import { radicarExcusa, getMisExcusas } from '../../services/excusasService';
 
 // ── Estado de la excusa: etiqueta, color y clase de badge ─────────────────────
 const ESTADO = {
@@ -79,13 +77,11 @@ function AnalisisIA({ analisis }) {
 }
 
 export default function ExcusasPage({ estudianteId }) {
-  const [asignaturas, setAsignaturas] = useState([]);
   const [excusas, setExcusas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Formulario
-  const [inscripcionId, setInscripcionId] = useState('');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [file, setFile] = useState(null);
@@ -97,20 +93,13 @@ export default function ExcusasPage({ estudianteId }) {
     setLoading(true);
     setError(null);
     try {
-      const [asigs, mis] = await Promise.all([
-        getMisAsignaturas(estudianteId),
-        getMisExcusas(),
-      ]);
-      setAsignaturas(asigs);
-      setExcusas(mis);
-      if (asigs[0] && !inscripcionId) setInscripcionId(asigs[0].inscripcionId);
+      setExcusas(await getMisExcusas());
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estudianteId]);
+  }, []);
 
   useEffect(() => { if (estudianteId) cargar(); }, [estudianteId, cargar]);
 
@@ -118,14 +107,13 @@ export default function ExcusasPage({ estudianteId }) {
     e.preventDefault();
     setFormError('');
     setSuccess('');
-    if (!inscripcionId) return setFormError('Selecciona la materia.');
     if (!fechaInicio || !fechaFin) return setFormError('Indica el rango de fechas que cubre el certificado.');
     if (fechaFin < fechaInicio) return setFormError('La fecha de fin no puede ser anterior a la de inicio.');
     if (!file) return setFormError('Adjunta el certificado (PDF o imagen).');
 
     setEnviando(true);
     try {
-      const r = await radicarExcusa({ inscripcionId, fechaInicio, fechaFin, file });
+      const r = await radicarExcusa({ fechaInicio, fechaFin, file });
       setSuccess(r.ia_analizada
         ? 'Excusa radicada y analizada por el asistente. Queda en revisión de la Dirección.'
         : 'Excusa radicada. Queda en revisión de la Dirección.');
@@ -156,7 +144,7 @@ export default function ExcusasPage({ estudianteId }) {
           <Upload size={17} /> Radicar excusa de inasistencia
         </div>
         <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 4, marginBottom: 16 }}>
-          Sube tu certificado (incapacidad, calamidad, etc.). El asistente lo analizará y la Dirección del programa decidirá.
+          Sube tu certificado (incapacidad, calamidad, etc.). Cubre todas tus materias en esas fechas. El asistente lo analizará y la Dirección del programa decidirá.
         </div>
 
         {formError && <div className="login-error" style={{ marginBottom: 12 }}>{formError}</div>}
@@ -167,16 +155,6 @@ export default function ExcusasPage({ estudianteId }) {
         )}
 
         <form onSubmit={enviar} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={lbl}>Materia</label>
-            <select className="input-field" value={inscripcionId} onChange={(e) => setInscripcionId(e.target.value)} style={{ width: '100%' }}>
-              {asignaturas.length === 0 && <option value="">No tienes materias inscritas</option>}
-              {asignaturas.map((a) => (
-                <option key={a.inscripcionId} value={a.inscripcionId}>{a.nombre} · {a.nrc}</option>
-              ))}
-            </select>
-          </div>
-
           <div className="grid grid-2" style={{ gap: 14 }}>
             <div>
               <label style={lbl}>Desde</label>
@@ -232,6 +210,13 @@ export default function ExcusasPage({ estudianteId }) {
                       <Icon size={12} /> {est.label}
                     </span>
                   </div>
+
+                  {ex.cobertura?.inasistencias > 0 && (
+                    <div style={{ fontSize: 12.5, color: 'var(--green)', marginTop: 8, fontWeight: 600 }}>
+                      Justificó {ex.cobertura.inasistencias} inasistencia{ex.cobertura.inasistencias === 1 ? '' : 's'}
+                      {ex.cobertura.materias?.length ? ` en ${ex.cobertura.materias.length} materia${ex.cobertura.materias.length === 1 ? '' : 's'}: ${ex.cobertura.materias.join(', ')}` : ''}
+                    </div>
+                  )}
 
                   {ex.motivo_decision && (
                     <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 8, fontStyle: 'italic' }}>

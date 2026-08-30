@@ -67,9 +67,9 @@ Inscripcion.hasMany(Alerta,  { foreignKey: 'inscripcion_id', as: 'alertas' });
 Alerta.belongsTo(Inscripcion,{ foreignKey: 'inscripcion_id', as: 'inscripcion' });
 
 // ── Excusas (flujo de justificación de inasistencia, Art. 29) ────────────────
-// Inscripcion <-> Excusa
-Inscripcion.hasMany(Excusa,  { foreignKey: 'inscripcion_id', as: 'excusas' });
-Excusa.belongsTo(Inscripcion,{ foreignKey: 'inscripcion_id', as: 'inscripcion' });
+// Estudiante <-> Excusa (la excusa cubre al estudiante, no a una materia)
+Estudiante.hasMany(Excusa,  { foreignKey: 'estudiante_id', as: 'excusas' });
+Excusa.belongsTo(Estudiante,{ foreignKey: 'estudiante_id', as: 'estudiante' });
 
 // Excusa <-> Asistencia (una excusa avalada cubre varias inasistencias del rango)
 Excusa.hasMany(Asistencia,   { foreignKey: 'excusa_id', as: 'asistencias' });

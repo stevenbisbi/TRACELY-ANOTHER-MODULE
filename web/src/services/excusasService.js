@@ -12,20 +12,11 @@ async function jsonOrThrow(res) {
 
 // ── Estudiante ────────────────────────────────────────────────
 
-// Asignaturas del estudiante (para elegir en qué materia va la excusa).
-// Reusa el endpoint de calificaciones, que trae la inscripción + asignatura.
-export const getMisAsignaturas = async (estudianteId) => {
-  const res = await fetch(`${API}/calificaciones/estudiante/${estudianteId}`, { headers: authHeaders() });
-  const inscripciones = await jsonOrThrow(res);
-  return inscripciones
-    .filter((i) => i.asignatura)
-    .map((i) => ({ inscripcionId: i.id, nombre: i.asignatura.nombre, nrc: i.asignatura.NRC }));
-};
-
 // Radica una excusa con el documento (PDF o imagen). multipart/form-data.
-export const radicarExcusa = async ({ inscripcionId, fechaInicio, fechaFin, file }) => {
+// La excusa cubre al estudiante en el rango de fechas (todas sus materias);
+// no se elige asignatura.
+export const radicarExcusa = async ({ fechaInicio, fechaFin, file }) => {
   const form = new FormData();
-  form.append('inscripcion_id', inscripcionId);
   form.append('fecha_inicio', fechaInicio);
   form.append('fecha_fin', fechaFin);
   if (file) form.append('documento', file);

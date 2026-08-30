@@ -29,17 +29,18 @@ function extDeMime(mime) {
 
 /**
  * Radica una excusa: guarda el documento, lo analiza con IA y la deja lista para
- * la decisión de la Dirección.
+ * la decisión de la Dirección. La excusa cubre al estudiante en el rango de
+ * fechas (todas sus materias), no una asignatura puntual.
  * @param {Object} p
- * @param {string} p.inscripcionId
- * @param {string} p.fechaInicio  YYYY-MM-DD
- * @param {string} p.fechaFin     YYYY-MM-DD
+ * @param {string} p.estudianteId  UUID del perfil estudiante
+ * @param {string} p.fechaInicio   YYYY-MM-DD
+ * @param {string} p.fechaFin      YYYY-MM-DD
  * @param {{ buffer: Buffer, mimetype: string, originalname: string }} p.documento
  */
-async function radicarExcusa({ inscripcionId, fechaInicio, fechaFin, documento }) {
+async function radicarExcusa({ estudianteId, fechaInicio, fechaFin, documento }) {
   // 1. Crear el registro base (estado inicial).
   const excusa = await Excusa.create({
-    inscripcion_id: inscripcionId,
+    estudiante_id: estudianteId,
     fecha_inicio: fechaInicio,
     fecha_fin: fechaFin,
     estado: 'radicada',
@@ -126,26 +127,18 @@ async function listarPendientesPorDirector(directorUsuarioId) {
     where: { estado: 'pendiente_direccion' },
     include: [
       {
-        model: Inscripcion,
-        as: 'inscripcion',
+        model: Estudiante,
+        as: 'estudiante',
         required: true,
         include: [
+          { model: Usuario, as: 'usuario', attributes: ['nombre', 'id_institucional'] },
           {
-            model: Estudiante,
-            as: 'estudiante',
+            model: Carrera,
+            as: 'carrera',
             required: true,
-            include: [
-              { model: Usuario, as: 'usuario', attributes: ['nombre', 'id_institucional'] },
-              {
-                model: Carrera,
-                as: 'carrera',
-                required: true,
-                where: { director_usuario_id: directorUsuarioId },
-                attributes: ['nombre', 'codigo'],
-              },
-            ],
+            where: { director_usuario_id: directorUsuarioId },
+            attributes: ['nombre', 'codigo'],
           },
-          { model: Asignatura, as: 'asignatura', attributes: ['nombre', 'NRC'] },
         ],
       },
     ],
@@ -169,24 +162,47 @@ async function decidir({ excusaId, decision, motivo, directorUsuarioId }) {
   }
 
   if (decision === 'avalar') {
-    // Marcar como justificadas las inasistencias del rango que cubre la excusa.
+    // Todas las inscripciones del estudiante (la excusa cubre a la persona).
+    const inscripciones = await Inscripcion.findAll({
+      where: { estudiante_id: excusa.estudiante_id },
+      attributes: ['id'],
+    });
+    const inscIds = inscripciones.map((i) => i.id);
+
+    // Marcar como justificadas las inasistencias del rango en TODAS sus materias.
     const [n] = await Asistencia.update(
       { justificada: true, excusa_id: excusa.id },
       {
         where: {
-          inscripcion_id: excusa.inscripcion_id,
+          inscripcion_id: { [Op.in]: inscIds },
           presente: false,
           fecha: { [Op.between]: [excusa.fecha_inicio, excusa.fecha_fin] },
         },
       }
     );
+
+    // Resumen de cobertura: cuántas inasistencias y en qué materias.
+    const cubiertas = await Asistencia.findAll({
+      where: { excusa_id: excusa.id },
+      include: [{
+        model: Inscripcion, as: 'inscripcion', attributes: [],
+        include: [{ model: Asignatura, as: 'asignatura', attributes: ['nombre'] }],
+      }],
+      attributes: ['id'],
+      raw: true,
+      nest: true,
+    });
+    const materias = [...new Set(cubiertas.map((a) => a.inscripcion?.asignatura?.nombre).filter(Boolean))];
+    const cobertura = { inasistencias: n, materias };
+
     await excusa.update({
       estado: 'avalada',
       avalada_por: directorUsuarioId,
       decidida_en: new Date(),
       motivo_decision: motivo ?? null,
+      cobertura,
     });
-    return { excusa: await excusa.reload(), inasistenciasJustificadas: n };
+    return { excusa: await excusa.reload(), inasistenciasJustificadas: n, cobertura };
   }
 
   if (decision === 'rechazar') {

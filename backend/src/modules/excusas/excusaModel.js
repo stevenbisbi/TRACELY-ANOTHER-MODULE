@@ -13,10 +13,13 @@ const sequelize = require('../../config/database');
 const Excusa = sequelize.define('excusa', {
   id: { type: DataTypes.UUID, defaultValue: UUIDV4, primaryKey: true },
 
-  inscripcion_id: {
+  // La excusa cubre al ESTUDIANTE durante un rango de fechas (una incapacidad
+  // no es de una materia: justifica todas las inasistencias del estudiante en
+  // esos días, en todas sus asignaturas).
+  estudiante_id: {
     type: DataTypes.UUID,
     allowNull: false,
-    references: { model: 'inscripcion', key: 'id' },
+    references: { model: 'estudiante', key: 'id' },
   },
 
   // Una de las 4 causales del parágrafo del Art. 29 (o 'no_clasificado' si la IA
@@ -72,9 +75,12 @@ const Excusa = sequelize.define('excusa', {
 
   // Trazabilidad: bajo qué versión del reglamento/política se resolvió.
   reglamento_version: { type: DataTypes.STRING, allowNull: true },
+
+  // Alcance de lo que quedó justificado al avalar: { inasistencias, materias: [...] }.
+  cobertura: { type: DataTypes.JSONB, allowNull: true },
 }, {
   tableName: 'excusa',
-  indexes: [{ fields: ['inscripcion_id', 'estado'] }],
+  indexes: [{ fields: ['estudiante_id', 'estado'] }],
 });
 
 module.exports = Excusa;
