@@ -46,7 +46,41 @@ function buildAiInput(documento, explicacion) {
  * @param {{ buffer: Buffer, mimetype: string, originalname: string }} [p.documento]
  * @param {string} [p.explicacion] explicación escrita (fuerza mayor sin certificado)
  */
-async function radicarExcusa({ estudianteId, fechaInicio, fechaFin, documento, explicacion }) {
+// Normaliza texto para comparar (minúsculas, sin tildes ni signos).
+function normalizar(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Verificaciones DETERMINÍSTICAS (no dependen del modelo): que el certificado
+// sea del estudiante y que las fechas coincidan con las de la excusa.
+function verificar(extraccion, { estudianteNombre, fechaInicio, fechaFin }) {
+  const alertas = [];
+
+  // Nombre del paciente vs estudiante.
+  if (extraccion?.nombre_paciente && estudianteNombre) {
+    const p = normalizar(extraccion.nombre_paciente);
+    const e = normalizar(estudianteNombre);
+    const pTokens = new Set(p.split(' ').filter(Boolean));
+    const eTokens = e.split(' ').filter(Boolean);
+    const comunes = eTokens.filter((t) => pTokens.has(t)).length;
+    const coincide = comunes >= 2 || (p && (p.includes(e) || e.includes(p)));
+    if (!coincide) {
+      alertas.push(`El certificado está a nombre de "${extraccion.nombre_paciente}", que no coincide con el estudiante (${estudianteNombre}).`);
+    }
+  }
+
+  // Fechas del certificado vs fechas declaradas en la excusa (deben solaparse).
+  if (extraccion?.fecha_inicio && extraccion?.fecha_fin) {
+    const solapan = extraccion.fecha_inicio <= fechaFin && extraccion.fecha_fin >= fechaInicio;
+    if (!solapan) {
+      alertas.push(`Las fechas del certificado (${extraccion.fecha_inicio} a ${extraccion.fecha_fin}) no coinciden con las de la excusa (${fechaInicio} a ${fechaFin}).`);
+    }
+  }
+  return alertas;
+}
+
+async function radicarExcusa({ estudianteId, estudianteNombre, estudianteIdInst, fechaInicio, fechaFin, documento, explicacion }) {
   // 1. Crear el registro base (estado inicial).
   const excusa = await Excusa.create({
     estudiante_id: estudianteId,
@@ -78,12 +112,22 @@ async function radicarExcusa({ estudianteId, fechaInicio, fechaFin, documento, e
   let analisis = null;
   if (ai.isAvailable() && aiInput) {
     try {
-      // 4a. Extracción de datos (estructurada, sin citas).
+      // 4a. Extracción de datos (estructurada, sin citas). Se le pasa el
+      // contexto del estudiante para que la IA también note incoherencias.
       const extraccion = await ai.provider().extractFromDocument({
         document: aiInput,
         schema: prompts.excusaExtractionSchema,
-        instruction: prompts.EXTRACTION_INSTRUCTION,
+        instruction: prompts.buildExtractionInstruction({
+          estudianteNombre, estudianteId: estudianteIdInst, fechaInicio, fechaFin,
+        }),
       });
+
+      // Verificaciones determinísticas (no dependen del modelo). Se anteponen a
+      // las anomalías para que el director siempre las vea, sea Haiku u Opus.
+      const verificaciones = verificar(extraccion, { estudianteNombre, fechaInicio, fechaFin });
+      if (verificaciones.length) {
+        extraccion.anomalias = [...verificaciones, ...(extraccion.anomalias || [])];
+      }
 
       // 4b. Evaluación normativa contra el reglamento (con citas del artículo).
       let evaluacion = null;

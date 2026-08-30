@@ -1,4 +1,4 @@
-const { Excusa, Estudiante } = require('../../models');
+const { Excusa, Estudiante, Usuario } = require('../../models');
 const excusaService = require('./excusaService');
 const ai = require('../../ai');
 
@@ -16,12 +16,19 @@ const excusaController = {
         return res.status(400).json({ error: 'Adjunta un certificado o escribe una explicación de la situación.' });
       }
 
-      // Resolver el perfil de estudiante del usuario autenticado.
-      const estudiante = await Estudiante.findOne({ where: { usuario_id: req.user.id }, attributes: ['id'] });
+      // Resolver el perfil de estudiante del usuario autenticado (con su nombre,
+      // para poder verificar que el certificado sea suyo).
+      const estudiante = await Estudiante.findOne({
+        where: { usuario_id: req.user.id },
+        attributes: ['id'],
+        include: [{ model: Usuario, as: 'usuario', attributes: ['nombre', 'id_institucional'] }],
+      });
       if (!estudiante) return res.status(403).json({ error: 'Solo los estudiantes pueden radicar excusas.' });
 
       const excusa = await excusaService.radicarExcusa({
         estudianteId: estudiante.id,
+        estudianteNombre: estudiante.usuario?.nombre,
+        estudianteIdInst: estudiante.usuario?.id_institucional,
         fechaInicio: fecha_inicio,
         fechaFin: fecha_fin,
         documento: req.file, // multer memoryStorage

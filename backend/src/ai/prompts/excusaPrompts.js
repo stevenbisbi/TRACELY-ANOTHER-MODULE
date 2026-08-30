@@ -25,6 +25,14 @@ const excusaExtractionSchema = z.object({
     .string()
     .nullable()
     .describe('Fecha de fin del período cubierto, YYYY-MM-DD; igual a inicio si es un solo día; null si no se indica'),
+  nombre_paciente: z
+    .string()
+    .nullable()
+    .describe('Nombre de la persona a quien pertenece/beneficia el certificado (el paciente, incapacitado o afectado); null si no aparece'),
+  identificacion_paciente: z
+    .string()
+    .nullable()
+    .describe('Documento o identificación del paciente si aparece en el certificado; null si no'),
   entidad_emisora: z
     .string()
     .nullable()
@@ -49,15 +57,31 @@ const excusaExtractionSchema = z.object({
     .describe('Señales de alerta para revisión humana: fechas inconsistentes, entidad dudosa, posible edición, etc. Vacío si no hay'),
 });
 
-const EXTRACTION_INSTRUCTION =
-  'Este documento sustenta la inasistencia de un estudiante. Puede ser un certificado ' +
-  '(incapacidad médica, constancia de calamidad, certificación laboral o de emergencia) ' +
-  'o una explicación escrita del propio estudiante sobre una situación de fuerza mayor. ' +
-  'Extrae los datos solicitados con precisión. No inventes datos: si algo no aparece, usa ' +
-  'null. No decidas si la excusa es válida — solo extrae la información. En "anomalias" ' +
-  'señala lo que un humano debería revisar; en particular, si el documento es una ' +
-  'declaración del propio estudiante sin soporte de un tercero (médico, autoridad, ' +
-  'empleador), indícalo, ya que el reglamento exige certificaciones originales.';
+// Construye la instrucción de extracción incluyendo el contexto del estudiante,
+// para que la IA pueda señalar (en "anomalias") incoherencias con quién radica y
+// con las fechas declaradas. Los cruces también se validan de forma determinística
+// en el servicio; esto es una capa adicional.
+function buildExtractionInstruction({ estudianteNombre, estudianteId, fechaInicio, fechaFin } = {}) {
+  const ctx =
+    `\n\nContexto de quien radica la excusa:\n` +
+    `- Estudiante: ${estudianteNombre ?? 'desconocido'} (ID ${estudianteId ?? 'desconocido'})\n` +
+    `- Fechas de inasistencia declaradas: ${fechaInicio ?? '?'} a ${fechaFin ?? '?'}`;
+  return (
+    'Este documento sustenta la inasistencia de un estudiante. Puede ser un certificado ' +
+    '(incapacidad médica, constancia de calamidad, certificación laboral o de emergencia) ' +
+    'o una explicación escrita del propio estudiante sobre una situación de fuerza mayor. ' +
+    'Extrae los datos solicitados con precisión. No inventes datos: si algo no aparece, usa ' +
+    'null. No decidas si la excusa es válida — solo extrae la información.' +
+    ctx +
+    '\n\nEn "anomalias" señala lo que un humano debería revisar; EN PARTICULAR: ' +
+    '(a) si el certificado pertenece a una persona DISTINTA del estudiante que radica ' +
+    '(compara el nombre/identificación del paciente con el del estudiante); ' +
+    '(b) si las fechas del certificado NO coinciden con las fechas de inasistencia ' +
+    'declaradas (incluye el año: un certificado de otro año es una incoherencia grave); ' +
+    '(c) si el documento es una declaración del propio estudiante sin soporte de un tercero ' +
+    '(médico, autoridad, empleador), ya que el reglamento exige certificaciones originales.'
+  );
+}
 
 // System para la evaluación normativa (usa el reglamento con citas).
 const EVALUATION_SYSTEM =
@@ -82,7 +106,7 @@ function buildEvaluationQuestion(datosExtraidos, contexto) {
 
 module.exports = {
   excusaExtractionSchema,
-  EXTRACTION_INSTRUCTION,
+  buildExtractionInstruction,
   EVALUATION_SYSTEM,
   buildEvaluationQuestion,
 };
