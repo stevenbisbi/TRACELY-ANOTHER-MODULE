@@ -64,6 +64,10 @@ const Excusa = sequelize.define('excusa', {
   documento_ruta:   { type: DataTypes.STRING, allowNull: true },
   documento_mime:   { type: DataTypes.STRING, allowNull: true },
 
+  // Explicación escrita por el estudiante (para fuerza mayor sin certificado).
+  // Puede acompañar a un documento o reemplazarlo.
+  explicacion: { type: DataTypes.TEXT, allowNull: true },
+
   // Resultado del análisis de la IA: datos extraídos, evaluación normativa y
   // citas del artículo. La IA propone; NO decide. JSON libre para el prototipo.
   analisis_ia: { type: DataTypes.JSONB, allowNull: true },

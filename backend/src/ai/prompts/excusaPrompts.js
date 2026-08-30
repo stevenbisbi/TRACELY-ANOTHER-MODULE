@@ -50,11 +50,14 @@ const excusaExtractionSchema = z.object({
 });
 
 const EXTRACTION_INSTRUCTION =
-  'Este documento es un certificado que un estudiante presenta para justificar una ' +
-  'inasistencia (una incapacidad médica, constancia de calamidad, certificación laboral ' +
-  'o de emergencia). Extrae los datos solicitados con precisión. No inventes datos: si ' +
-  'algo no aparece en el documento, usa null. No decidas si la excusa es válida — solo ' +
-  'extrae la información. Señala en "anomalias" cualquier cosa que un humano debería revisar.';
+  'Este documento sustenta la inasistencia de un estudiante. Puede ser un certificado ' +
+  '(incapacidad médica, constancia de calamidad, certificación laboral o de emergencia) ' +
+  'o una explicación escrita del propio estudiante sobre una situación de fuerza mayor. ' +
+  'Extrae los datos solicitados con precisión. No inventes datos: si algo no aparece, usa ' +
+  'null. No decidas si la excusa es válida — solo extrae la información. En "anomalias" ' +
+  'señala lo que un humano debería revisar; en particular, si el documento es una ' +
+  'declaración del propio estudiante sin soporte de un tercero (médico, autoridad, ' +
+  'empleador), indícalo, ya que el reglamento exige certificaciones originales.';
 
 // System para la evaluación normativa (usa el reglamento con citas).
 const EVALUATION_SYSTEM =

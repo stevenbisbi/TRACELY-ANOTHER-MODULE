@@ -154,6 +154,12 @@ export default function ExcusasInboxPage() {
                     </div>
                   </div>
 
+                  {ex.explicacion && (
+                    <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, borderLeft: '3px solid var(--border2)', paddingLeft: 10 }}>
+                      <span style={{ fontWeight: 600 }}>Explicación del estudiante:</span> “{ex.explicacion}”
+                    </div>
+                  )}
+
                   <AnalisisIA analisis={ex.analisis_ia} />
 
                   {/* Decisión */}

@@ -69,33 +69,32 @@ class AnthropicProvider extends LLMProvider {
   async extractFromDocument({ document, schema, instruction }) {
     this._requireClient();
     try {
-      const isPdf = document.mimeType === 'application/pdf';
-      const docBlock = isPdf
-        ? {
-            type: 'document',
-            source: {
-              type: 'base64',
-              media_type: 'application/pdf',
-              data: document.buffer.toString('base64'),
-            },
-          }
-        : {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: document.mimeType,
-              data: document.buffer.toString('base64'),
-            },
-          };
+      // El documento puede venir como texto ya extraído (p. ej. de un Word) o
+      // como binario (PDF / imagen). El texto va como bloque de texto; el binario
+      // como bloque document/image según su tipo.
+      let content;
+      if (document.text != null) {
+        content = [{ type: 'text', text: `${instruction}\n\nContenido del documento:\n${document.text}` }];
+      } else {
+        const isPdf = document.mimeType === 'application/pdf';
+        const docBlock = isPdf
+          ? {
+              type: 'document',
+              source: { type: 'base64', media_type: 'application/pdf', data: document.buffer.toString('base64') },
+            }
+          : {
+              type: 'image',
+              source: { type: 'base64', media_type: document.mimeType, data: document.buffer.toString('base64') },
+            };
+        content = [docBlock, { type: 'text', text: instruction }];
+      }
 
       // messages.parse valida la respuesta contra el esquema Zod automáticamente.
       // (No se usan citas aquí: extracción de datos, no interpretación normativa.)
       const response = await this.client.messages.parse({
         model: this.cfg.model,
         max_tokens: this.cfg.maxTokens,
-        messages: [
-          { role: 'user', content: [docBlock, { type: 'text', text: instruction }] },
-        ],
+        messages: [{ role: 'user', content }],
         output_config: { format: zodOutputFormat(schema) },
       });
 

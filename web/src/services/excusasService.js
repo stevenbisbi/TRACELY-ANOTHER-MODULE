@@ -15,11 +15,12 @@ async function jsonOrThrow(res) {
 // Radica una excusa con el documento (PDF o imagen). multipart/form-data.
 // La excusa cubre al estudiante en el rango de fechas (todas sus materias);
 // no se elige asignatura.
-export const radicarExcusa = async ({ fechaInicio, fechaFin, file }) => {
+export const radicarExcusa = async ({ fechaInicio, fechaFin, file, explicacion }) => {
   const form = new FormData();
   form.append('fecha_inicio', fechaInicio);
   form.append('fecha_fin', fechaFin);
   if (file) form.append('documento', file);
+  if (explicacion) form.append('explicacion', explicacion);
 
   // No se fija Content-Type: fetch pone el boundary del multipart solo.
   const res = await fetch(`${API}/excusas`, { method: 'POST', headers: authHeaders(), body: form });

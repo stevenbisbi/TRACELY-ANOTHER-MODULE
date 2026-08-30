@@ -85,6 +85,7 @@ export default function ExcusasPage({ estudianteId }) {
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [file, setFile] = useState(null);
+  const [explicacion, setExplicacion] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [formError, setFormError] = useState('');
   const [success, setSuccess] = useState('');
@@ -107,17 +108,18 @@ export default function ExcusasPage({ estudianteId }) {
     e.preventDefault();
     setFormError('');
     setSuccess('');
-    if (!fechaInicio || !fechaFin) return setFormError('Indica el rango de fechas que cubre el certificado.');
+    if (!fechaInicio || !fechaFin) return setFormError('Indica el rango de fechas que cubre la excusa.');
     if (fechaFin < fechaInicio) return setFormError('La fecha de fin no puede ser anterior a la de inicio.');
-    if (!file) return setFormError('Adjunta el certificado (PDF o imagen).');
+    if (!file && !explicacion.trim()) return setFormError('Adjunta un certificado o escribe una explicación de la situación.');
 
     setEnviando(true);
     try {
-      const r = await radicarExcusa({ fechaInicio, fechaFin, file });
+      const r = await radicarExcusa({ fechaInicio, fechaFin, file, explicacion: explicacion.trim() });
       setSuccess(r.ia_analizada
         ? 'Excusa radicada y analizada por el asistente. Queda en revisión de la Dirección.'
         : 'Excusa radicada. Queda en revisión de la Dirección.');
       setFile(null);
+      setExplicacion('');
       setFechaInicio('');
       setFechaFin('');
       await cargar();
@@ -177,6 +179,18 @@ export default function ExcusasPage({ estudianteId }) {
             {file && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}><FileText size={13} /> {file.name}</div>}
           </div>
 
+          <div>
+            <label style={lbl}>Explicación de la situación (si es fuerza mayor sin certificado)</label>
+            <textarea
+              className="input-field"
+              rows={3}
+              placeholder="Describe qué ocurrió (ej: calamidad familiar, emergencia). La Dirección lo revisará."
+              value={explicacion}
+              onChange={(e) => setExplicacion(e.target.value)}
+              style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
+            />
+          </div>
+
           <button type="submit" className="btn btn-primary" disabled={enviando} style={{ alignSelf: 'flex-start' }}>
             {enviando ? <><Loader2 size={15} className="spin" /> Enviando...</> : <><Upload size={15} /> Radicar excusa</>}
           </button>
@@ -210,6 +224,12 @@ export default function ExcusasPage({ estudianteId }) {
                       <Icon size={12} /> {est.label}
                     </span>
                   </div>
+
+                  {ex.explicacion && (
+                    <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 8, lineHeight: 1.5 }}>
+                      <span style={{ fontWeight: 600 }}>Tu explicación:</span> “{ex.explicacion}”
+                    </div>
+                  )}
 
                   {ex.cobertura?.inasistencias > 0 && (
                     <div style={{ fontSize: 12.5, color: 'var(--green)', marginTop: 8, fontWeight: 600 }}>

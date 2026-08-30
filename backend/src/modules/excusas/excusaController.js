@@ -7,9 +7,13 @@ const excusaController = {
   // La excusa cubre al estudiante; no se elige materia.
   radicar: async (req, res) => {
     try {
-      const { fecha_inicio, fecha_fin } = req.body;
+      const { fecha_inicio, fecha_fin, explicacion } = req.body;
       if (!fecha_inicio || !fecha_fin) {
         return res.status(400).json({ error: 'fecha_inicio y fecha_fin son requeridos.' });
+      }
+      // Debe venir al menos un soporte: el certificado o una explicación escrita.
+      if (!req.file && !(explicacion && explicacion.trim())) {
+        return res.status(400).json({ error: 'Adjunta un certificado o escribe una explicación de la situación.' });
       }
 
       // Resolver el perfil de estudiante del usuario autenticado.
@@ -21,6 +25,7 @@ const excusaController = {
         fechaInicio: fecha_inicio,
         fechaFin: fecha_fin,
         documento: req.file, // multer memoryStorage
+        explicacion: explicacion?.trim() || null,
       });
 
       res.status(201).json({

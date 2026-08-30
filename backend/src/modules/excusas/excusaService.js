@@ -27,6 +27,14 @@ function extDeMime(mime) {
   return 'bin';
 }
 
+// Qué se manda a la IA para analizar: el certificado (binario) si lo hay; si no,
+// la explicación escrita del estudiante (texto), para casos de fuerza mayor.
+function buildAiInput(documento, explicacion) {
+  if (documento?.buffer) return { buffer: documento.buffer, mimeType: documento.mimetype };
+  if (explicacion) return { text: explicacion };
+  return null;
+}
+
 /**
  * Radica una excusa: guarda el documento, lo analiza con IA y la deja lista para
  * la decisión de la Dirección. La excusa cubre al estudiante en el rango de
@@ -35,9 +43,10 @@ function extDeMime(mime) {
  * @param {string} p.estudianteId  UUID del perfil estudiante
  * @param {string} p.fechaInicio   YYYY-MM-DD
  * @param {string} p.fechaFin      YYYY-MM-DD
- * @param {{ buffer: Buffer, mimetype: string, originalname: string }} p.documento
+ * @param {{ buffer: Buffer, mimetype: string, originalname: string }} [p.documento]
+ * @param {string} [p.explicacion] explicación escrita (fuerza mayor sin certificado)
  */
-async function radicarExcusa({ estudianteId, fechaInicio, fechaFin, documento }) {
+async function radicarExcusa({ estudianteId, fechaInicio, fechaFin, documento, explicacion }) {
   // 1. Crear el registro base (estado inicial).
   const excusa = await Excusa.create({
     estudiante_id: estudianteId,
@@ -46,6 +55,7 @@ async function radicarExcusa({ estudianteId, fechaInicio, fechaFin, documento })
     estado: 'radicada',
     documento_nombre: documento?.originalname ?? null,
     documento_mime: documento?.mimetype ?? null,
+    explicacion: explicacion || null,
   });
 
   // 2. Guardar el documento en disco (si vino).
@@ -63,12 +73,14 @@ async function radicarExcusa({ estudianteId, fechaInicio, fechaFin, documento })
   await excusa.update({ dentro_de_plazo: dentro, fecha_limite: fechaLimite });
 
   // 4. Análisis de IA (si está disponible). Si no, queda para revisión manual.
+  // Se analiza el certificado si lo hay; si no, la explicación escrita.
+  const aiInput = buildAiInput(documento, explicacion);
   let analisis = null;
-  if (ai.isAvailable() && documento?.buffer) {
+  if (ai.isAvailable() && aiInput) {
     try {
-      // 4a. Extracción de datos del certificado (estructurada, sin citas).
+      // 4a. Extracción de datos (estructurada, sin citas).
       const extraccion = await ai.provider().extractFromDocument({
-        document: { buffer: documento.buffer, mimeType: documento.mimetype },
+        document: aiInput,
         schema: prompts.excusaExtractionSchema,
         instruction: prompts.EXTRACTION_INSTRUCTION,
       });
