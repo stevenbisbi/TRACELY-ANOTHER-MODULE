@@ -29,6 +29,12 @@ export function onAlertaResuelta(callback) {
   connectSocket().on('alerta:resuelta', callback);
 }
 
+// Resultado de una excusa de inasistencia (avalada o rechazada), sea por la
+// Dirección o por verificación automática.
+export function onExcusaResuelta(callback) {
+  connectSocket().on('excusa:resuelta', callback);
+}
+
 export function disconnectSocket() {
   if (!socket) return;
   socket.disconnect();

@@ -34,8 +34,11 @@ export const getMisExcusas = async () => {
 
 // ── Dirección de programa ─────────────────────────────────────
 
-export const getPendientes = async () => {
-  const res = await fetch(`${API}/excusas/pendientes`, { headers: authHeaders() });
+// Sin estado → pendientes de decisión. Con estado (p. ej. 'avalada') → auditoría
+// de las ya resueltas, incluidas las avaladas automáticamente.
+export const getPendientes = async (estado) => {
+  const q = estado ? `?estado=${encodeURIComponent(estado)}` : '';
+  const res = await fetch(`${API}/excusas/pendientes${q}`, { headers: authHeaders() });
   return jsonOrThrow(res);
 };
 

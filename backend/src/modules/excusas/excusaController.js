@@ -65,9 +65,11 @@ const excusaController = {
   },
 
   // GET /api/excusas/pendientes  (director de programa)
+  // ?estado=avalada  → auditoría de las ya resueltas (incl. automáticas)
   pendientes: async (req, res) => {
     try {
-      const excusas = await excusaService.listarPendientesPorDirector(req.user.id);
+      const filtro = req.query.estado ? { estado: req.query.estado } : {};
+      const excusas = await excusaService.listarPendientesPorDirector(req.user.id, filtro);
       res.json(excusas);
     } catch (err) {
       console.error('pendientes:', err);

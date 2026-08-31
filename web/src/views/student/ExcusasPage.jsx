@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { fadeInUp } from '../../utils/motionVariants';
 import { radicarExcusa, getMisExcusas } from '../../services/excusasService';
+import { onExcusaResuelta } from '../../services/socketService';
 
 // ── Estado de la excusa: etiqueta, color y clase de badge ─────────────────────
 const ESTADO = {
@@ -37,6 +38,7 @@ export default function ExcusasPage({ estudianteId }) {
   const [excusas, setExcusas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [aviso, setAviso] = useState(null);   // resultado recibido en tiempo real
 
   // Formulario
   const [fechaInicio, setFechaInicio] = useState('');
@@ -60,6 +62,15 @@ export default function ExcusasPage({ estudianteId }) {
   }, []);
 
   useEffect(() => { if (estudianteId) cargar(); }, [estudianteId, cargar]);
+
+  // Si la excusa se resuelve (por la Dirección o automáticamente), la lista se
+  // actualiza sola y se muestra el aviso, sin recargar la página.
+  useEffect(() => {
+    onExcusaResuelta((payload) => {
+      setAviso(payload);
+      cargar();
+    });
+  }, [cargar]);
 
   const enviar = async (e) => {
     e.preventDefault();
@@ -96,6 +107,37 @@ export default function ExcusasPage({ estudianteId }) {
 
   return (
     <motion.div variants={fadeInUp} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* ── Aviso en tiempo real del resultado de una excusa ── */}
+      {aviso && (
+        <div
+          className="card"
+          style={{
+            padding: '14px 18px', display: 'flex', gap: 10, alignItems: 'flex-start',
+            borderLeft: `4px solid ${aviso.estado === 'avalada' ? 'var(--green)' : 'var(--red)'}`,
+          }}
+        >
+          {aviso.estado === 'avalada'
+            ? <CheckCircle2 size={18} style={{ color: 'var(--green)', flexShrink: 0, marginTop: 1 }} />
+            : <XCircle size={18} style={{ color: 'var(--red)', flexShrink: 0, marginTop: 1 }} />}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              Tu excusa fue {aviso.estado === 'avalada' ? 'aceptada' : 'rechazada'}
+              {aviso.automatica && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', marginLeft: 8 }}>· verificación automática</span>}
+            </div>
+            {aviso.cobertura?.inasistencias > 0 && (
+              <div style={{ fontSize: 12.5, color: 'var(--green)', marginTop: 3, fontWeight: 600 }}>
+                Se justificaron {aviso.cobertura.inasistencias} inasistencia{aviso.cobertura.inasistencias === 1 ? '' : 's'}
+                {aviso.cobertura.materias?.length ? ` en: ${aviso.cobertura.materias.join(', ')}` : ''}
+              </div>
+            )}
+            {aviso.motivo && (
+              <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 4, lineHeight: 1.5 }}>{aviso.motivo}</div>
+            )}
+          </div>
+          <button className="close-btn" onClick={() => setAviso(null)} aria-label="Cerrar">×</button>
+        </div>
+      )}
 
       {/* ── Formulario para radicar ── */}
       <div className="card" style={{ padding: 22 }}>
@@ -196,8 +238,14 @@ export default function ExcusasPage({ estudianteId }) {
                   )}
 
                   {ex.motivo_decision && (
-                    <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 8, fontStyle: 'italic' }}>
-                      Dirección: “{ex.motivo_decision}”
+                    <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 8, display: 'flex', gap: 6, alignItems: 'flex-start', lineHeight: 1.5 }}>
+                      {ex.decidido_por === 'ia'
+                        ? <Sparkles size={13} style={{ flexShrink: 0, marginTop: 2, color: 'var(--accent)' }} />
+                        : null}
+                      <span>
+                        <b>{ex.decidido_por === 'ia' ? 'Verificación automática:' : 'Dirección:'}</b>{' '}
+                        <span style={{ fontStyle: 'italic' }}>{ex.motivo_decision}</span>
+                      </span>
                     </div>
                   )}
 

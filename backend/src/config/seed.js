@@ -261,6 +261,11 @@ async function seed() {
         ],
         nota_perdida_por_inasistencia: 0.0,
         nota_aprobacion: 3.0,
+        // Aval automático: si está en true, el sistema avala solo las excusas
+        // que pasan TODAS las verificaciones determinísticas (identidad, fechas,
+        // plazo, causal válida, entidad emisora, sin anomalías). El resto va a
+        // la Dirección. En false, todas pasan por revisión humana (Art. 29).
+        auto_aval_ia_habilitado: true,
         // Artículo de origen de cada parámetro (para citar la norma).
         fuentes: {
           inasistencia_max_sin_justificar: 'Art. 29',

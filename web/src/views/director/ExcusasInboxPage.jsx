@@ -75,18 +75,19 @@ export default function ExcusasInboxPage() {
   const [error, setError] = useState(null);
   const [motivos, setMotivos] = useState({});   // por excusa id
   const [procesando, setProcesando] = useState(null);
+  const [tab, setTab] = useState('pendientes'); // 'pendientes' | 'avaladas'
 
   const cargar = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setExcusas(await getPendientes());
+      setExcusas(await getPendientes(tab === 'avaladas' ? 'avalada' : undefined));
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tab]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -113,15 +114,26 @@ export default function ExcusasInboxPage() {
     <motion.div variants={fadeInUp} initial="hidden" animate="show">
       <div className="card" style={{ padding: 22 }}>
         <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Inbox size={18} /> Excusas por revisar
-          {excusas.length > 0 && <span className="badge badge-warning" style={{ marginLeft: 6 }}>{excusas.length}</span>}
+          <Inbox size={18} /> {tab === 'pendientes' ? 'Excusas por revisar' : 'Excusas avaladas'}
+          {excusas.length > 0 && <span className={`badge ${tab === 'pendientes' ? 'badge-warning' : 'badge-active'}`} style={{ marginLeft: 6 }}>{excusas.length}</span>}
         </div>
-        <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 4, marginBottom: 16 }}>
-          Excusas de inasistencia de tu programa pendientes de aval. Avala o rechaza según el reglamento.
+        <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 4, marginBottom: 12 }}>
+          {tab === 'pendientes'
+            ? 'Excusas de inasistencia de tu programa pendientes de aval. Avala o rechaza según el reglamento.'
+            : 'Excusas ya avaladas, incluidas las que pasaron la verificación automática. Vista de auditoría.'}
+        </div>
+
+        <div className="tabs" style={{ marginBottom: 14 }}>
+          <button className={`tab ${tab === 'pendientes' ? 'active' : ''}`} onClick={() => setTab('pendientes')}>
+            Pendientes
+          </button>
+          <button className={`tab ${tab === 'avaladas' ? 'active' : ''}`} onClick={() => setTab('avaladas')}>
+            Avaladas
+          </button>
         </div>
 
         {excusas.length === 0 ? (
-          <div className="empty"><div className="empty-icon"><CheckCircle2 /></div>No hay excusas pendientes. Todo al día.</div>
+          <div className="empty"><div className="empty-icon"><CheckCircle2 /></div>{tab === 'pendientes' ? 'No hay excusas pendientes. Todo al día.' : 'Aún no hay excusas avaladas.'}</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {excusas.map((ex) => {
@@ -162,7 +174,27 @@ export default function ExcusasInboxPage() {
 
                   <AnalisisIA analisis={ex.analisis_ia} />
 
-                  {/* Decisión */}
+                  {/* Resultado (vista de auditoría) */}
+                  {ex.estado === 'avalada' && (
+                    <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.5 }}>
+                      {ex.decidido_por === 'ia'
+                        ? <Sparkles size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
+                        : <CheckCircle2 size={14} style={{ color: 'var(--green)', flexShrink: 0, marginTop: 2 }} />}
+                      <span>
+                        <b>{ex.decidido_por === 'ia' ? 'Avalada automáticamente' : `Avalada por ${ex.avalada_por ?? 'la Dirección'}`}</b>
+                        {ex.motivo_decision ? ` — ${ex.motivo_decision}` : ''}
+                        {ex.cobertura?.inasistencias > 0 && (
+                          <span style={{ color: 'var(--green)', fontWeight: 600 }}>
+                            {' '}Justificó {ex.cobertura.inasistencias} inasistencia{ex.cobertura.inasistencias === 1 ? '' : 's'}
+                            {ex.cobertura.materias?.length ? ` en ${ex.cobertura.materias.join(', ')}` : ''}.
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Decisión (solo para pendientes) */}
+                  {ex.estado === 'pendiente_direccion' && (
                   <div style={{ marginTop: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     <input
                       className="input-field"
@@ -180,6 +212,7 @@ export default function ExcusasInboxPage() {
                       <XCircle size={15} /> Rechazar
                     </button>
                   </div>
+                  )}
                 </div>
               );
             })}

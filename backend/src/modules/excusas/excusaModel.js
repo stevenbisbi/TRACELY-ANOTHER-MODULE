@@ -72,10 +72,12 @@ const Excusa = sequelize.define('excusa', {
   // citas del artículo. La IA propone; NO decide. JSON libre para el prototipo.
   analisis_ia: { type: DataTypes.JSONB, allowNull: true },
 
-  // Decisión humana (Dirección del programa).
+  // Quién resolvió: 'director' (humano) o 'ia' (aval automático, solo cuando
+  // TODAS las verificaciones determinísticas pasaron). Queda para auditoría.
+  decidido_por:    { type: DataTypes.ENUM('director', 'ia'), allowNull: true },
   avalada_por:     { type: DataTypes.STRING, allowNull: true, references: { model: 'usuario', key: 'id_institucional' } },
   decidida_en:     { type: DataTypes.DATE, allowNull: true },
-  motivo_decision: { type: DataTypes.STRING, allowNull: true },
+  motivo_decision: { type: DataTypes.TEXT, allowNull: true },
 
   // Trazabilidad: bajo qué versión del reglamento/política se resolvió.
   reglamento_version: { type: DataTypes.STRING, allowNull: true },

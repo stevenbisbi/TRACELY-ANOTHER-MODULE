@@ -14,6 +14,7 @@ const {
   Excusa, Asistencia, Inscripcion, Estudiante, Asignatura, Carrera, Usuario,
 } = require('../../models');
 const ai = require('../../ai');
+const socketService = require('../../services/socketService');
 const reglamentoService = require('../politica/reglamentoService');
 const { dentroDePlazo } = require('../../utils/diasHabiles');
 const prompts = require('../../ai/prompts/excusaPrompts');
@@ -78,6 +79,63 @@ function verificar(extraccion, { estudianteNombre, fechaInicio, fechaFin }) {
     }
   }
   return alertas;
+}
+
+/**
+ * Compuertas del AVAL AUTOMÁTICO. No es "la IA decide": es el sistema aplicando
+ * criterios determinísticos sobre lo que la IA extrajo. Si CUALQUIERA falla, la
+ * excusa va a revisión de la Dirección.
+ * @returns {{ procede: boolean, motivo: string }}
+ */
+function evaluarAutoAval({ extraccion, dentroDePlazo, tieneDocumento, verificaciones }) {
+  const falla = (m) => ({ procede: false, motivo: m });
+
+  if (!tieneDocumento) return falla('No hay certificado de un tercero (solo explicación escrita).');
+  if (!extraccion) return falla('No hay análisis del documento.');
+  if (verificaciones?.length) return falla(verificaciones[0]);
+  if (extraccion.legible === false) return falla('El documento no es legible.');
+  if (!extraccion.tipo || extraccion.tipo === 'no_clasificado') {
+    return falla('La causal no encuadra en las del reglamento.');
+  }
+  if (!extraccion.entidad_emisora) return falla('El documento no identifica a la entidad que lo expide.');
+  if (dentroDePlazo === false) return falla('Se radicó fuera del plazo establecido.');
+  if (extraccion.anomalias?.length) return falla(`Anomalía detectada: ${extraccion.anomalias[0]}`);
+
+  const entidad = extraccion.entidad_emisora;
+  const periodo = extraccion.fecha_inicio === extraccion.fecha_fin
+    ? extraccion.fecha_inicio
+    : `${extraccion.fecha_inicio} a ${extraccion.fecha_fin}`;
+  return {
+    procede: true,
+    motivo:
+      `Avalada automáticamente: certificado de ${entidad} a nombre del estudiante, ` +
+      `causal válida (${extraccion.tipo.replace(/_/g, ' ')}), período ${periodo}, ` +
+      `radicada dentro del plazo. Verificaciones de identidad y fechas correctas.`,
+  };
+}
+
+/** Notifica al estudiante el resultado de su excusa (tiempo real + correo). */
+async function notificarEstudiante(excusa, resultado, cobertura) {
+  try {
+    const estudiante = await Estudiante.findByPk(excusa.estudiante_id, {
+      include: [{ model: Usuario, as: 'usuario', attributes: ['id_institucional', 'nombre', 'correo'] }],
+    });
+    const usuarioId = estudiante?.usuario?.id_institucional;
+    if (!usuarioId) return;
+
+    socketService.emitToStudent(usuarioId, 'excusa:resuelta', {
+      excusaId: excusa.id,
+      estado: resultado,                       // 'avalada' | 'rechazada'
+      automatica: excusa.decidido_por === 'ia',
+      motivo: excusa.motivo_decision,
+      cobertura: cobertura ?? excusa.cobertura ?? null,
+      fecha_inicio: excusa.fecha_inicio,
+      fecha_fin: excusa.fecha_fin,
+    });
+  } catch (e) {
+    // La notificación nunca debe tumbar el trámite.
+    console.error('notificarEstudiante:', e.message);
+  }
 }
 
 async function radicarExcusa({ estudianteId, estudianteNombre, estudianteIdInst, fechaInicio, fechaFin, documento, explicacion }) {
@@ -154,7 +212,17 @@ async function radicarExcusa({ estudianteId, estudianteNombre, estudianteIdInst,
         analizado_en: new Date().toISOString(),
       };
 
-      // La IA sugiere el tipo; se guarda como propuesta (la decisión sigue siendo humana).
+      // 4c. ¿Procede el aval automático? Solo si la política lo habilita y TODAS
+      // las compuertas determinísticas pasan. Si no, queda para la Dirección.
+      const autoHabilitado = politica?.parametros?.auto_aval_ia_habilitado === true;
+      const auto = evaluarAutoAval({
+        extraccion,
+        dentroDePlazo: dentro,
+        tieneDocumento: !!documento?.buffer,
+        verificaciones,
+      });
+      analisis.auto_aval = { habilitado: autoHabilitado, ...auto };
+
       const updates = {
         analisis_ia: analisis,
         estado: 'pendiente_direccion',
@@ -162,6 +230,12 @@ async function radicarExcusa({ estudianteId, estudianteNombre, estudianteIdInst,
       };
       if (extraccion?.tipo) updates.tipo = extraccion.tipo;
       await excusa.update(updates);
+
+      if (autoHabilitado && auto.procede) {
+        const r = await aplicarAval(excusa, { decididoPor: 'ia', avaladaPor: null, motivo: auto.motivo });
+        await excusa.reload();
+        await notificarEstudiante(excusa, 'avalada', r.cobertura);
+      }
     } catch (e) {
       // Falla de IA: no bloquea el trámite, queda para revisión manual.
       await excusa.update({
@@ -177,10 +251,15 @@ async function radicarExcusa({ estudianteId, estudianteNombre, estudianteIdInst,
   return excusa.reload();
 }
 
-/** Excusas pendientes de decisión para los programas que dirige un director. */
-async function listarPendientesPorDirector(directorUsuarioId) {
+/**
+ * Excusas del programa que dirige un director.
+ * @param {string} directorUsuarioId
+ * @param {Object} [filtro] por defecto las pendientes; { estado } para otras
+ *   (p. ej. las avaladas automáticamente, para auditoría).
+ */
+async function listarPendientesPorDirector(directorUsuarioId, filtro = {}) {
   return Excusa.findAll({
-    where: { estado: 'pendiente_direccion' },
+    where: { estado: 'pendiente_direccion', ...filtro },
     include: [
       {
         model: Estudiante,
@@ -203,6 +282,54 @@ async function listarPendientesPorDirector(directorUsuarioId) {
 }
 
 /**
+ * Aplica el aval: marca justificadas las inasistencias del rango en TODAS las
+ * materias del estudiante y guarda la cobertura. Reutilizado por la decisión
+ * del director y por el aval automático.
+ */
+async function aplicarAval(excusa, { decididoPor, avaladaPor, motivo }) {
+  const inscripciones = await Inscripcion.findAll({
+    where: { estudiante_id: excusa.estudiante_id },
+    attributes: ['id'],
+  });
+  const inscIds = inscripciones.map((i) => i.id);
+
+  const [n] = await Asistencia.update(
+    { justificada: true, excusa_id: excusa.id },
+    {
+      where: {
+        inscripcion_id: { [Op.in]: inscIds },
+        presente: false,
+        fecha: { [Op.between]: [excusa.fecha_inicio, excusa.fecha_fin] },
+      },
+    }
+  );
+
+  // Resumen de cobertura: cuántas inasistencias y en qué materias.
+  const cubiertas = await Asistencia.findAll({
+    where: { excusa_id: excusa.id },
+    include: [{
+      model: Inscripcion, as: 'inscripcion', attributes: [],
+      include: [{ model: Asignatura, as: 'asignatura', attributes: ['nombre'] }],
+    }],
+    attributes: ['id'],
+    raw: true,
+    nest: true,
+  });
+  const materias = [...new Set(cubiertas.map((a) => a.inscripcion?.asignatura?.nombre).filter(Boolean))];
+  const cobertura = { inasistencias: n, materias };
+
+  await excusa.update({
+    estado: 'avalada',
+    decidido_por: decididoPor,
+    avalada_por: avaladaPor ?? null,
+    decidida_en: new Date(),
+    motivo_decision: motivo ?? null,
+    cobertura,
+  });
+  return { inasistenciasJustificadas: n, cobertura };
+}
+
+/**
  * Decisión de la Dirección sobre una excusa.
  * @param {Object} p
  * @param {string} p.excusaId
@@ -218,60 +345,26 @@ async function decidir({ excusaId, decision, motivo, directorUsuarioId }) {
   }
 
   if (decision === 'avalar') {
-    // Todas las inscripciones del estudiante (la excusa cubre a la persona).
-    const inscripciones = await Inscripcion.findAll({
-      where: { estudiante_id: excusa.estudiante_id },
-      attributes: ['id'],
+    const r = await aplicarAval(excusa, {
+      decididoPor: 'director', avaladaPor: directorUsuarioId, motivo,
     });
-    const inscIds = inscripciones.map((i) => i.id);
-
-    // Marcar como justificadas las inasistencias del rango en TODAS sus materias.
-    const [n] = await Asistencia.update(
-      { justificada: true, excusa_id: excusa.id },
-      {
-        where: {
-          inscripcion_id: { [Op.in]: inscIds },
-          presente: false,
-          fecha: { [Op.between]: [excusa.fecha_inicio, excusa.fecha_fin] },
-        },
-      }
-    );
-
-    // Resumen de cobertura: cuántas inasistencias y en qué materias.
-    const cubiertas = await Asistencia.findAll({
-      where: { excusa_id: excusa.id },
-      include: [{
-        model: Inscripcion, as: 'inscripcion', attributes: [],
-        include: [{ model: Asignatura, as: 'asignatura', attributes: ['nombre'] }],
-      }],
-      attributes: ['id'],
-      raw: true,
-      nest: true,
-    });
-    const materias = [...new Set(cubiertas.map((a) => a.inscripcion?.asignatura?.nombre).filter(Boolean))];
-    const cobertura = { inasistencias: n, materias };
-
-    await excusa.update({
-      estado: 'avalada',
-      avalada_por: directorUsuarioId,
-      decidida_en: new Date(),
-      motivo_decision: motivo ?? null,
-      cobertura,
-    });
-    return { excusa: await excusa.reload(), inasistenciasJustificadas: n, cobertura };
+    await notificarEstudiante(excusa, 'avalada', r.cobertura);
+    return { excusa: await excusa.reload(), ...r };
   }
 
   if (decision === 'rechazar') {
     await excusa.update({
       estado: 'rechazada',
+      decidido_por: 'director',
       avalada_por: directorUsuarioId,
       decidida_en: new Date(),
       motivo_decision: motivo ?? null,
     });
+    await notificarEstudiante(excusa, 'rechazada');
     return { excusa: await excusa.reload(), inasistenciasJustificadas: 0 };
   }
 
   throw new Error("Decisión inválida (usa 'avalar' o 'rechazar').");
 }
 
-module.exports = { radicarExcusa, listarPendientesPorDirector, decidir };
+module.exports = { radicarExcusa, listarPendientesPorDirector, decidir, evaluarAutoAval };
