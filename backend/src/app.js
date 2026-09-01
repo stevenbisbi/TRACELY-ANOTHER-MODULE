@@ -115,6 +115,17 @@ sequelize.authenticate()
       console.log(`🔌 Socket.IO listo`);
     });
   })
-  .catch(err => { console.error('❌', err.message); process.exit(1); });
+  .catch(err => {
+    // Algunos errores de Sequelize (p. ej. ECONNREFUSED) llegan con message
+    // vacío; sin este detalle el arranque fallaba mostrando solo "❌".
+    const detalle = err.message || err.original?.message || err.parent?.message || err.name;
+    console.error('❌ No se pudo iniciar:', detalle);
+    if (err.original?.code === 'ECONNREFUSED' || err.parent?.code === 'ECONNREFUSED') {
+      console.error('   PostgreSQL no responde en ' +
+        `${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}. ` +
+        '¿Está el servidor de base de datos encendido?');
+    }
+    process.exit(1);
+  });
 
 module.exports = app;
