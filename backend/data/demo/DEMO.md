@@ -7,6 +7,22 @@ Credenciales: estudiante `2021-0342`/`est123` · director `DIR-TDS`/`dir123` · 
 
 ---
 
+## Certificados adicionales para revisión manual desde la web (sin curl)
+
+Para probar el flujo completo desde la interfaz (sin terminal): iniciar sesión como el estudiante,
+ir a "Radicar excusa", subir el PDF y las fechas indicadas; luego iniciar sesión como `DIR-TDS` y
+avalar o rechazar desde "Excusas".
+
+| PDF | Estudiante | Fechas a declarar | Qué muestra |
+|---|---|---|---|
+| `incapacidad_andres_mejia.pdf` | `2022-0411` / `est123` (Andrés Mejía) | 2026-09-01 a 2026-09-02 | Certificado "limpio" en contenido, pero la IA nota que es un PDF de texto sin firma/sello escaneado → queda pendiente de revisión del director en vez de autoavalarse. Bueno para mostrar que la IA no aprueba a ciegas. |
+| `incapacidad_valentina_torres.pdf` | `2021-0199` / `est123` (Valentina Torres) | 2026-09-02 a 2026-09-03 | El certificado dice 5–6 de septiembre, pero la excusa se declara para 2–3 de septiembre → la verificación determinística de fechas detecta el desfase y obliga a revisión manual, sin depender del criterio del modelo. |
+
+Ambos casos ya tienen inasistencias reales registradas en esas fechas (Bases de Datos II), así que al
+avalar desde el panel del director se justifican de verdad.
+
+---
+
 ## Preparación (una vez, antes de la demo)
 
 ```bash
