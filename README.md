@@ -100,6 +100,16 @@ En `backend/data/demo/` hay certificados PDF listos para radicar como Andrés o 
 cómo los evalúa la IA (uno se avala automático, el otro queda pendiente para el director). Guía
 completa con qué PDF usar, con qué estudiante y qué fechas declarar: [`backend/data/demo/DEMO.md`](backend/data/demo/DEMO.md).
 
+### Qué ve cada rol en el módulo de excusas (IA)
+
+| Rol | Dónde | Qué ve |
+|---|---|---|
+| **Estudiante** | `/student/excusas` (sidebar → "Excusas") | Formulario para radicar (fechas + certificado o explicación escrita) y su lista "Mis excusas" con el estado (radicada, en revisión, avalada, rechazada). Recibe el resultado en tiempo real (Socket.IO) apenas se resuelve. **No** ve el análisis interno de la IA. |
+| **Director de programa** | `/director/excusas` (sidebar → "Excusas") | Pestaña **Pendientes**: excusas de su programa esperando decisión, con el análisis completo de la IA (extracción del certificado, anomalías detectadas, evaluación contra el reglamento con citas del artículo) y los botones Avalar/Rechazar. Pestaña **Avaladas**: auditoría de las ya resueltas, incluidas las avaladas automáticamente (marcadas "verificación automática"). |
+| **Docente** | — | Todavía **no tiene vista propia** en este módulo. Cuando una excusa se avala, la inasistencia queda marcada como justificada en la base de datos (`asistencia.justificada`), pero esa marca aún no se refleja en la pantalla de asistencia del docente — solo ve presente/ausente. |
+
+En resumen: la IA solo es visible para la Dirección (quien decide); el estudiante ve el resultado, no el razonamiento; y el docente, por ahora, queda fuera del circuito.
+
 ---
 
 ## Notas
