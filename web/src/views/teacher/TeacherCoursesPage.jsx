@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, AlertTriangle, CalendarX, Users, NotebookPen, Save, Check, X, Settings, FileText, FileSpreadsheet, Download } from 'lucide-react';
+import { Loader2, AlertTriangle, CalendarX, Users, NotebookPen, Save, Check, X, Settings, FileText, FileSpreadsheet, Download, History } from 'lucide-react';
 import GradePanel from '../../components/charts/GradePanel';
 import CourseSettingsModal from './CourseSettingsModal';
+import AttendanceHistoryPanel from './AttendanceHistoryPanel';
 import { attColor } from '../../utils/helpers';
 import { getTeacherDashboard, saveAttendance } from '../../services/teacherService';
 import { downloadStudentReport, downloadGroupReport } from '../../services/reportService';
@@ -27,6 +28,7 @@ export default function TeacherCoursesPage({ docenteId, semestre, initialCourseI
   const [activeCourse, setActiveCourse] = useState(null);
   const [attendance,   setAttendance]   = useState({});
   const [gradePanel,   setGradePanel]   = useState(null);
+  const [historyPanel, setHistoryPanel] = useState(null);
   const [saving,       setSaving]       = useState(false);
   const [toast,        setToast]        = useState(null);
   const [showCourseSettings, setShowCourseSettings] = useState(false);
@@ -139,6 +141,9 @@ export default function TeacherCoursesPage({ docenteId, semestre, initialCourseI
           onSaved={(message) => setToast({ message, type: 'success' })}
         />
       )}
+      {historyPanel && (
+        <AttendanceHistoryPanel course={historyPanel} onClose={() => setHistoryPanel(null)} />
+      )}
       {showCourseSettings && activeCourse && (
         <CourseSettingsModal
           course={activeCourse}
@@ -163,6 +168,9 @@ export default function TeacherCoursesPage({ docenteId, semestre, initialCourseI
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn btn-ghost btn-sm" onClick={() => activeCourse && setGradePanel(activeCourse)}>
               <NotebookPen size={13} /> Ver notas
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => activeCourse && setHistoryPanel(activeCourse)}>
+              <History size={13} /> Historial de asistencia
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => setShowCourseSettings(true)}>
               <Settings size={13} /> Configurar curso

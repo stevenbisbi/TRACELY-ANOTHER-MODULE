@@ -45,3 +45,16 @@ export const saveDayAttendance = async ({ asignatura_id, fecha, records }) => {
 
   return res.json();
 };
+
+// Historial completo de asistencia de un curso (docente): todas las fechas
+// registradas, de todos los estudiantes inscritos, desde el primer día hasta hoy.
+export const getAttendanceHistory = async (asignaturaId) => {
+  const token = getToken();
+
+  const res = await fetch(`${API}/attendance/asignatura/${asignaturaId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) throw new Error('Error al obtener el historial de asistencia');
+  return res.json();
+};
