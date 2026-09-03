@@ -89,8 +89,16 @@ npx expo start
 | Director de programa | `DIR-TDS` | `dir123` |
 | Docente | `DOC-0112` (Dr. Carlos Ramírez) | `prof123` |
 | Estudiante | `2021-0342` (Michael Sanchez) | `est123` |
+| Estudiante | `2022-0411` (Andrés Mejía) | `est123` |
+| Estudiante | `2021-0199` (Valentina Torres) | `est123` |
 
 > ⚠️ `npm run seed` borra y recrea todas las tablas. No correrlo en producción.
+
+### Probar el flujo de excusas con certificados reales
+
+En `backend/data/demo/` hay certificados PDF listos para radicar como Andrés o Valentina y ver
+cómo los evalúa la IA (uno se avala automático, el otro queda pendiente para el director). Guía
+completa con qué PDF usar, con qué estudiante y qué fechas declarar: [`backend/data/demo/DEMO.md`](backend/data/demo/DEMO.md).
 
 ---
 
